@@ -68,7 +68,6 @@ export default function ProjectsListPage() {
       setMyRole(me.role);
 
       // Load tasks first (needed for STAFF filter + stats)
-      // ✅ keep lightweight: only fields we need
       const tRes = await supabase.from("tasks").select("project_id,status,assignee_user_id");
       if (tRes.error) throw new Error(tRes.error.message);
 
@@ -164,6 +163,20 @@ export default function ProjectsListPage() {
     return map;
   }, [projects, tasks]);
 
+  // ✅ GROUP BY CLIENT (Option 2)
+  const groupedByClient = useMemo(() => {
+    const map = new Map<string, ProjectRow[]>();
+
+    for (const p of projects) {
+      const key = p.clients?.name?.trim() || "No Client";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+
+    // return sorted sections by client name
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [projects]);
+
   return (
     <div className="mx-auto max-w-6xl">
       {/* Header */}
@@ -199,116 +212,142 @@ export default function ProjectsListPage() {
         </div>
       )}
 
-      <div className="mt-6 overflow-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-left">
-            <tr>
-              <th className="p-3 font-extrabold">Project</th>
-              <th className="p-3 font-extrabold">Client</th>
-              <th className="p-3 font-extrabold">Priority</th>
-              <th className="p-3 font-extrabold">Status</th>
-              <th className="p-3 font-extrabold">Progress</th>
-              <th className="p-3 font-extrabold">Due</th>
-              <th className="p-3 font-extrabold">Action</th>
-            </tr>
-          </thead>
+      {/* ✅ GROUPED SECTIONS */}
+      <div className="mt-6 space-y-6">
+        {groupedByClient.map(([clientName, clientProjects]) => (
+          <div
+            key={clientName}
+            className="overflow-auto rounded-2xl border border-gray-200 bg-white shadow-sm"
+          >
+            {/* Client header */}
+            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-extrabold">{clientName}</div>
+                <div className="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-gray-700 border">
+                  {clientProjects.length} project{clientProjects.length > 1 ? "s" : ""}
+                </div>
+              </div>
 
-          <tbody>
-            {projects.map((p) => {
-              const stat = projectStats[p.id] || { total: 0, done: 0, blocked: 0, open: 0 };
-              const pct = stat.total === 0 ? 0 : Math.round((stat.done / stat.total) * 100);
+              {/* Optional: quick info */}
+              <div className="text-[11px] text-gray-500">
+                Total tasks:{" "}
+                <b>
+                  {clientProjects.reduce((sum, p) => sum + (projectStats[p.id]?.total || 0), 0)}
+                </b>
+              </div>
+            </div>
 
-              return (
-                <tr key={p.id} className="border-t border-gray-200">
-                  <td className="p-3 font-semibold">
-                    <Link href={`/projects/${p.id}`} className="hover:underline">
-                      {p.name}
-                    </Link>
-                    {stat.blocked > 0 && (
-                      <div className="mt-1 text-[11px] font-bold text-amber-700">
-                        Blocked: {stat.blocked}
-                      </div>
-                    )}
-                  </td>
-
-                  <td className="p-3">{p.clients?.name || "-"}</td>
-                  <td className="p-3">{p.priority}</td>
-
-                  <td className="p-3">
-                    <span
-                      className={[
-                        "rounded-full px-3 py-1 text-xs font-extrabold",
-                        p.status === "COMPLETED"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-700",
-                      ].join(" ")}
-                    >
-                      {p.status}
-                    </span>
-                  </td>
-
-                  <td className="p-3 w-[220px]">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 rounded-full bg-gray-200">
-                        <div className="h-2 rounded-full bg-gray-900" style={{ width: `${pct}%` }} />
-                      </div>
-                      <span className="text-xs font-bold">{pct}%</span>
-                    </div>
-                    <div className="mt-1 text-[11px] text-gray-500">
-                      {stat.done}/{stat.total} done
-                    </div>
-                  </td>
-
-                  <td className="p-3">{p.due_date || "-"}</td>
-
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/projects/${p.id}`}
-                        className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-extrabold hover:bg-gray-50"
-                      >
-                        View
-                      </Link>
-
-                      {isAdmin ? (
-                      <>
-                        <Link
-                          href={`/projects/${p.id}/edit`}
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-extrabold hover:bg-gray-50"
-                        >
-                          Edit
-                        </Link>
-
-                        <button
-                          onClick={() => deleteProject(p.id)}
-                          className="rounded-lg bg-red-600 px-3 py-1 text-xs font-extrabold text-white hover:opacity-90"
-                        >
-                          Delete
-                        </button>
-                      </>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </div>
-                  </td>
+            <table className="min-w-full text-sm">
+              <thead className="bg-white text-left">
+                <tr>
+                  <th className="p-3 font-extrabold">Project</th>
+                  <th className="p-3 font-extrabold">Priority</th>
+                  <th className="p-3 font-extrabold">Status</th>
+                  <th className="p-3 font-extrabold">Progress</th>
+                  <th className="p-3 font-extrabold">Due</th>
+                  <th className="p-3 font-extrabold">Action</th>
                 </tr>
-              );
-            })}
+              </thead>
 
-            {projects.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-4 text-center text-gray-500">
-                  No projects yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              <tbody>
+                {clientProjects.map((p) => {
+                  const stat = projectStats[p.id] || { total: 0, done: 0, blocked: 0, open: 0 };
+                  const pct = stat.total === 0 ? 0 : Math.round((stat.done / stat.total) * 100);
+
+                  return (
+                    <tr key={p.id} className="border-t border-gray-200">
+                      <td className="p-3 font-semibold">
+                        <Link href={`/projects/${p.id}`} className="hover:underline">
+                          {p.name}
+                        </Link>
+                        {stat.blocked > 0 && (
+                          <div className="mt-1 text-[11px] font-bold text-amber-700">
+                            Blocked: {stat.blocked}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="p-3">{p.priority}</td>
+
+                      <td className="p-3">
+                        <span
+                          className={[
+                            "rounded-full px-3 py-1 text-xs font-extrabold",
+                            p.status === "COMPLETED"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-700",
+                          ].join(" ")}
+                        >
+                          {p.status}
+                        </span>
+                      </td>
+
+                      <td className="p-3 w-[220px]">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 rounded-full bg-gray-200">
+                            <div
+                              className="h-2 rounded-full bg-gray-900"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold">{pct}%</span>
+                        </div>
+                        <div className="mt-1 text-[11px] text-gray-500">
+                          {stat.done}/{stat.total} done
+                        </div>
+                      </td>
+
+                      <td className="p-3">{p.due_date || "-"}</td>
+
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/projects/${p.id}`}
+                            className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-extrabold hover:bg-gray-50"
+                          >
+                            View
+                          </Link>
+
+                          {isAdmin ? (
+                            <>
+                              <Link
+                                href={`/projects/${p.id}/edit`}
+                                className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-extrabold hover:bg-gray-50"
+                              >
+                                Edit
+                              </Link>
+
+                              <button
+                                onClick={() => deleteProject(p.id)}
+                                className="rounded-lg bg-red-600 px-3 py-1 text-xs font-extrabold text-white hover:opacity-90"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ))}
+
+        {projects.length === 0 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center text-gray-500">
+            No projects yet.
+          </div>
+        )}
       </div>
 
       {!isAdmin && (
         <div className="mt-3 text-xs text-gray-500">
-          Note: STAFF view = projects yang ada task assigned pada user ini. Only <b>ADMIN</b> boleh delete project.
+          Note: STAFF view = projects yang ada task assigned pada user ini. Only <b>ADMIN</b>{" "}
+          boleh delete project.
         </div>
       )}
     </div>
