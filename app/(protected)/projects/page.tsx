@@ -271,12 +271,21 @@ export default function ProjectsListPage() {
                       </Link>
 
                       {isAdmin ? (
+                      <>
+                        <Link
+                          href={`/projects/${p.id}/edit`}
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-xs font-extrabold hover:bg-gray-50"
+                        >
+                          Edit
+                        </Link>
+
                         <button
                           onClick={() => deleteProject(p.id)}
                           className="rounded-lg bg-red-600 px-3 py-1 text-xs font-extrabold text-white hover:opacity-90"
                         >
                           Delete
                         </button>
+                      </>
                       ) : (
                         <span className="text-xs text-gray-400">—</span>
                       )}
