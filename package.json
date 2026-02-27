@@ -1,7 +1,5 @@
-{
-  "dependencies": {
-    "next": "file:...",
-    "react": "file:...",
-    "react-dom": "file:..."
-  }
+"dependencies": {
+  "next": "14.x",
+  "react": "18.x",
+  "react-dom": "18.x"
 }
