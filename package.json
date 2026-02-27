@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "next": "file:...",
+    "react": "file:...",
+    "react-dom": "file:..."
+  }
+}
