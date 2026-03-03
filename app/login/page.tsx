@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase/client";
+import { Eye, EyeOff, Lock, Mail, Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,93 +30,141 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: eTrim,
-      password,
-    });
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: eTrim,
+        password,
+      });
 
-    if (error) {
-      // msg supabase kadang-kadang panjang, tapi ok
-      setMsg(error.message);
-      return;
+      if (error) {
+        setMsg(error.message);
+        return;
+      }
+
+      router.replace("/projects");
+    } catch (err) {
+      setMsg("Berlaku ralat teknikal. Sila cuba lagi.");
+    } finally {
+      setLoading(false);
     }
-
-    router.replace("/projects");
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="mx-auto flex min-h-screen max-w-md items-center px-4">
-        <div className="w-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo/Header Section */}
+        <div className="mb-8 text-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900 text-white mb-4 shadow-lg">
+            <Lock size={24} />
+          </div>
+          <h2 className="text-sm font-bold tracking-widest text-gray-500 uppercase">
+            Etcetera Vision
+          </h2>
+          <h1 className="mt-2 text-3xl font-extrabold text-gray-900">
+            Sistem Monitor Projek
+          </h1>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-xl">
           <div className="mb-6">
-            <div className="text-sm font-extrabold text-gray-900">
-              Sistem Monitor Projek (Etcetera Vision)
-            </div>
-            <h1 className="mt-1 text-2xl font-extrabold">Log masuk</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Masukkan email & password untuk akses dashboard.
+            <h2 className="text-xl font-bold text-gray-800">Log Masuk</h2>
+            <p className="text-sm text-gray-500">
+              Masukkan info anda untuk akses dashboard.
             </p>
           </div>
 
-          <form onSubmit={onLogin} className="space-y-3">
+          <form onSubmit={onLogin} className="space-y-5">
+            {/* Email Field */}
             <div>
-              <label className="mb-1 block text-xs font-bold text-gray-700">
-                Email
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
+                Email Anda
               </label>
-              <input
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-gray-900"
-                placeholder="contoh: admin@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                inputMode="email"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  <Mail size={18} />
+                </div>
+                <input
+                  type="email"
+                  className="w-full rounded-xl border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-sm transition-all focus:border-gray-900 focus:bg-white focus:ring-2 focus:ring-gray-900/10 outline-none"
+                  placeholder="admin@etcetera.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </div>
             </div>
 
+            {/* Password Field */}
             <div>
-              <label className="mb-1 block text-xs font-bold text-gray-700">
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-700">
                 Password
               </label>
-
-              <div className="flex items-stretch gap-2">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                  <Lock size={18} />
+                </div>
                 <input
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-gray-900"
+                  className="w-full rounded-xl border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-12 text-sm transition-all focus:border-gray-900 focus:bg-white focus:ring-2 focus:ring-gray-900/10 outline-none"
                   placeholder="••••••••"
                   type={showPass ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
+                  required
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPass((v) => !v)}
-                  className="rounded-xl border border-gray-300 bg-white px-3 text-xs font-extrabold hover:bg-gray-50"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
                 >
-                  {showPass ? "Hide" : "Show"}
+                  {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
+            {/* Error Message */}
             {msg && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">
-                {msg}
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                <AlertCircle size={18} className="shrink-0" />
+                <span>{msg}</span>
               </div>
             )}
 
+            {/* Submit Button */}
             <button
               disabled={!canSubmit}
-              className="mt-2 w-full rounded-xl bg-gray-900 px-4 py-2 text-sm font-extrabold text-white hover:opacity-95 disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-3 text-sm font-bold text-white transition-all hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Sila Tunggu...
+                </>
+              ) : (
+                "Masuk Dashboard"
+              )}
             </button>
 
-            <div className="pt-2 text-center text-[11px] text-gray-500">
-              Lupa password? Hahahaha. Xpe, roger je bro.
+            {/* Footer */}
+            <div className="mt-6 text-center">
+              <p className="text-xs text-gray-500">
+                Lupa password?{" "}
+                <button 
+                  type="button" 
+                  onClick={() => alert("Sila hubungi admin sistem (IT) untuk reset.")}
+                  className="font-bold text-gray-900 hover:underline"
+                >
+                  Hubungi Admin
+                </button>
+              </p>
             </div>
           </form>
         </div>
+        
+        <p className="mt-8 text-center text-[10px] uppercase tracking-widest text-gray-400 font-medium">
+          © {new Date().getFullYear()} Etcetera Vision Sdn Bhd
+        </p>
       </div>
     </div>
   );
